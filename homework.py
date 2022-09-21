@@ -38,10 +38,11 @@ HOMEWORK_STATUSES = {
 
 
 def send_message(bot, message):
-    """Отправляет сообщение в Telegram чат,
-    определяемый переменной окружения TELEGRAM_CHAT_ID.
+    """Отправляет сообщение в Telegram чат.
+    Чат определяется переменной окружения TELEGRAM_CHAT_ID.
     Принимает на вход два параметра:
-    экземпляр класса Bot и строку с текстом сообщения."""
+    экземпляр класса Bot и строку с текстом сообщения.
+    """
     try:
         posted_message = bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
@@ -57,7 +58,8 @@ def get_api_answer(current_timestamp):
     """Делает запрос к единственному эндпоинту API-сервиса.
     В качестве параметра функция получает временную метку.
     В случае успешного запроса должна вернуть ответ API,
-    преобразовав его из формата JSON к типам данных Python."""
+    преобразовав его из формата JSON к типам данных Python.
+    """
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     response = requests.get(url=ENDPOINT, headers=HEADERS, params=params)
@@ -74,7 +76,8 @@ def check_response(response):
     приведенный к типам данных Python.
     Если ответ API соответствует ожиданиям,
     то функция должна вернуть список домашних работ (он может быть и пустым),
-    доступный в ответе API по ключу 'homeworks'."""
+    доступный в ответе API по ключу 'homeworks'.
+    """
     try:
         homework_list = response['homeworks']
     except KeyError as error:
@@ -99,7 +102,8 @@ def parse_status(homework):
      только один элемент из списка домашних работ.
     В случае успеха, функция возвращает
     подготовленную для отправки в Telegram строку,
-    содержащую один из вердиктов словаря HOMEWORK_STATUSES."""
+    содержащую один из вердиктов словаря HOMEWORK_STATUSES.
+    """
     if 'homework_name' not in homework or 'status' not in homework:
         raise KeyError('No homework name or status at homework dict!')
     homework_name = homework['homework_name']
@@ -112,10 +116,10 @@ def parse_status(homework):
 
 
 def check_tokens():
-    """Проверяет доступность переменных окружения,
-    которые необходимы для работы программы.
+    """Проверяет доступность переменных окружения, необходимые для программы.
     Если отсутствует хотя бы одна переменная окружения
-    — функция должна вернуть False, иначе — True."""
+    — функция должна вернуть False, иначе — True.
+    """
     environment_variables = {
         'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
