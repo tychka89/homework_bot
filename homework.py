@@ -6,7 +6,8 @@ import telegram
 import requests
 
 from dotenv import load_dotenv
-from exeptions import NonTokenError
+from exeptions import NonTokenError, NotHTTPStatusOKError
+from http import HTTPStatus
 
 import exeptions
 
@@ -73,13 +74,13 @@ def get_api_answer(current_timestamp):
     преобразовав его из формата JSON к типам данных Python."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    try:
-        response = requests.get(url=ENDPOINT, headers=HEADERS, params=params)
-        #return response.json()
-        return json.loads(hw)
-    except:
-        pass
-
+    response = requests.get(url=ENDPOINT, headers=HEADERS, params=params)
+    if response.status_code != HTTPStatus.OK:
+        message = 'Ошибка при получении ответа с сервера'
+        raise exceptions.NotHTTPStatusOKError(message)
+    logger.info('Соединение с сервером установлено!')
+    return response.json()
+    # return json.loads(hw)
 
 def check_response(response):
     """Проверяет ответ API на корректность.
@@ -90,20 +91,34 @@ def check_response(response):
     доступный в ответе API по ключу 'homeworks'."""
     try:
         homework_list = response['homeworks']
-        homework = homework_list[0]
-        return homework
+    except KeyError as error:
+        logger.error('Отсутствует ключ у homeworks')
+        raise error
     except TypeError as error:
-        logger.error('Ответ от API пришел не в виде словаря')
+        logger.error("Ответ от API пришел не в виде словаря.")
+        raise error
 
+    try:
+        homework = homework_list[0]
+
+    except IndexError as error:
+        logger.error('Список домашних работ пуст')
+        raise error
+    return homework
 
 def parse_status(homework):
     """Извлекает из информации о конкретной домашней работе статус этой работы.
     В качестве параметра функция получает только один элемент из списка домашних работ.
     В случае успеха, функция возвращает подготовленную для отправки в Telegram строку,
     содержащую один из вердиктов словаря HOMEWORK_STATUSES."""
+    if 'homework_name' not in homework or 'status' not in homework:
+        raise KeyError('No homework name or status at homework dict!')
     homework_name = homework['homework_name']
     homework_status = homework['status']
-    verdict = HOMEWORK_STATUSES[homework_status]
+    try:
+        verdict = HOMEWORK_STATUSES[homework_status]
+    except Exception as error:
+        logging.error(f'Получен неизвестный статус {error}.')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -113,15 +128,15 @@ def check_tokens():
     Если отсутствует хотя бы одна переменная окружения
     — функция должна вернуть False, иначе — True."""
     environment_variables = {
-        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
-        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
-        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
-    }
+            'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+            'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+            'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
+        }
     for key, value in environment_variables.items():
         if value in ('', None, False):
             logger.critical(f'Отсутствует токен: {key}')
             return False
-    return True
+        return True
 
 def main():
     """Основная логика работы бота."""
