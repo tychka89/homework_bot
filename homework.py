@@ -9,8 +9,6 @@ from dotenv import load_dotenv
 from exeptions import NonTokenError, NotHTTPStatusOKError
 from http import HTTPStatus
 
-import exeptions
-
 load_dotenv()
 
 logging.basicConfig(
@@ -38,20 +36,6 @@ HOMEWORK_STATUSES = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-hw = '''{
-\"homeworks\":[
-{
-\"id\":124,
-\"status\":\"rejected\",
-\"homework_name\":\"username__hw_python_oop.zip\",
-\"reviewer_comment\":\"Код не по PEP8, нужно исправить\",
-\"date_updated\":\"2020-02-13T16:42:47Z\",
-\"lesson_name\":\"Итоговый проект\"
-}
-],
-\"current_date\":1581604970
-}'''
-
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат,
@@ -59,14 +43,16 @@ def send_message(bot, message):
     Принимает на вход два параметра:
     экземпляр класса Bot и строку с текстом сообщения."""
     try:
-        posted_message = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        posted_message = bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message)
         logger.info(f'Сообщение отправлено в Telegram: "{message}"')
         return posted_message
     except telegram.error.TelegramError as error:
         logger.error(f'Ошибка: {error}')
         raise error
 
-import json
+
 def get_api_answer(current_timestamp):
     """Делает запрос к единственному эндпоинту API-сервиса.
     В качестве параметра функция получает временную метку.
@@ -77,10 +63,10 @@ def get_api_answer(current_timestamp):
     response = requests.get(url=ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != HTTPStatus.OK:
         message = 'Ошибка при получении ответа с сервера'
-        raise exceptions.NotHTTPStatusOKError(message)
+        raise NotHTTPStatusOKError(message)
     logger.info('Соединение с сервером установлено!')
     return response.json()
-    # return json.loads(hw)
+
 
 def check_response(response):
     """Проверяет ответ API на корректность.
@@ -106,10 +92,13 @@ def check_response(response):
         raise error
     return homework
 
+
 def parse_status(homework):
     """Извлекает из информации о конкретной домашней работе статус этой работы.
-    В качестве параметра функция получает только один элемент из списка домашних работ.
-    В случае успеха, функция возвращает подготовленную для отправки в Telegram строку,
+    В качестве параметра функция получает
+     только один элемент из списка домашних работ.
+    В случае успеха, функция возвращает
+    подготовленную для отправки в Telegram строку,
     содержащую один из вердиктов словаря HOMEWORK_STATUSES."""
     if 'homework_name' not in homework or 'status' not in homework:
         raise KeyError('No homework name or status at homework dict!')
@@ -128,22 +117,23 @@ def check_tokens():
     Если отсутствует хотя бы одна переменная окружения
     — функция должна вернуть False, иначе — True."""
     environment_variables = {
-            'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
-            'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
-            'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
-        }
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
+    }
     for key, value in environment_variables.items():
         if value in ('', None, False):
             logger.critical(f'Отсутствует токен: {key}')
             return False
         return True
 
+
 def main():
     """Основная логика работы бота."""
     if not check_tokens():
-        message = 'Отсутствуют токены (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)'
+        message = 'Отсутствуют токены'
         logger.critical(message)
-        raise exeptions.NonTokenError(message)
+        raise NonTokenError(message)
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
@@ -151,10 +141,8 @@ def main():
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            print(response)
             homework = check_response(response)
             message = parse_status(homework)
-            print(homework)
             send_message(bot, message)
             current_timestamp = int(time.time())
             time.sleep(RETRY_TIME)
