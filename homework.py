@@ -77,7 +77,7 @@ def get_api_answer(current_timestamp):
     преобразовав его из формата JSON к типам данных Python.
     """
     logger.info('Пытаемся отправить запрос')
-    timestamp = current_timestamp or int(time.time())
+    timestamp = 1549962000
     params = {'from_date': timestamp}
     request_params = {
         'url': ENDPOINT,
